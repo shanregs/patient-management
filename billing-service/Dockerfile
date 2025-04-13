@@ -1,22 +1,22 @@
-FROM maven:3.9.9-eclipse-temurin-21 AS builder
+    FROM maven:3.9.9-eclipse-temurin-21 AS builder
 
-WORKDIR /app
+    WORKDIR /app
 
-COPY pom.xml .
+    COPY pom.xml .
 
-RUN mvn dependency:go-offline
+    RUN mvn dependency:go-offline
 
-COPY src ./src
+    COPY src ./src
 
-RUN mvn clean package -DskipTests
+    RUN mvn clean package -DskipTests
 
-FROM openjdk:21-jdk AS runner
+    FROM openjdk:21-jdk AS runner
 
-WORKDIR /app
+    WORKDIR /app
 
-COPY --from=builder ./app/target/billing-service-*.jar ./app.jar
+    COPY --from=builder ./app/target/billing-service-*.jar ./app.jar
 
-EXPOSE 4001
-EXPOSE 9001
+    EXPOSE 4001
+    EXPOSE 9001
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+    ENTRYPOINT ["java", "-jar", "app.jar"]

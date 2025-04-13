@@ -6,6 +6,7 @@ import com.shan.ms.pm.patientservice.dto.PatientResponseDTO;
 import com.shan.ms.pm.patientservice.exception.EmailAlreadyExistsException;
 import com.shan.ms.pm.patientservice.exception.PatientNotFoundException;
 import com.shan.ms.pm.patientservice.grpc.BillingServiceGrpcClient;
+import com.shan.ms.pm.patientservice.kafka.PatientKafkaProducer;
 import com.shan.ms.pm.patientservice.mapper.PatientMapper;
 import com.shan.ms.pm.patientservice.model.Patient;
 import com.shan.ms.pm.patientservice.repository.PatientRepository;
@@ -22,19 +23,15 @@ public class PatientService {
     private static final Logger log = LoggerFactory.getLogger(PatientService.class);
     private final PatientRepository  patientRepository;
     private final BillingServiceGrpcClient billingServiceGrpcClient;
-    public PatientService(PatientRepository patientRepository, BillingServiceGrpcClient billingServiceGrpcClient) {
+    private final PatientKafkaProducer patientKafkaProducer;
+    public PatientService(PatientRepository patientRepository, BillingServiceGrpcClient billingServiceGrpcClient, PatientKafkaProducer patientKafkaProducer) {
         this.patientRepository = patientRepository;
         this.billingServiceGrpcClient = billingServiceGrpcClient;
+        this.patientKafkaProducer = patientKafkaProducer;
     }
 
     public List<PatientResponseDTO> getPatients() {
         List<Patient> patients = patientRepository.findAll();
-
-        /*List<PatientResponseDTO> patientResponseDTOS =
-                patients.stream().map(a ->
-                            PatientMapper.toDTO(a)
-                        ).toList();*/
-
         List<PatientResponseDTO> patientResponseDTOS = patients.stream().map(PatientMapper::toDTO).toList();
         return patientResponseDTOS;
     }
@@ -49,7 +46,9 @@ public class PatientService {
         log.info("Received PatientRequestDTO : {}",patientRequestDTO);
         Patient newPatient = patientRepository.save(PatientMapper.toPatient(patientRequestDTO));
         log.info("Saved new Patient  : {}",newPatient);
-        BillingResponse response = billingServiceGrpcClient.createBillingRequest(newPatient.getId().toString(), newPatient.getName(), newPatient.getEmail());
+        BillingResponse response = billingServiceGrpcClient.createBillingRequest(newPatient.getId().toString(),
+                newPatient.getName(), newPatient.getEmail());
+        patientKafkaProducer.sendEvent(newPatient);
         log.info("Billing response : {}", response);
         return PatientMapper.toDTO(newPatient);
     }

@@ -12,7 +12,8 @@
     <modules>
         <module>patient-service</module>
         <module>billing-service</module>
-        <module>proto-shared</module>
+        <!--<module>proto-shared</module>-->
+        <module>analytics-service</module>
     </modules>
 
 </project>
